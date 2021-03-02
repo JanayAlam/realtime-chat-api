@@ -2,7 +2,7 @@
 const express = require('express');
 const app = express();
 
-// dot env and configuration
+// dot env and configuration dependencies
 require('dotenv').config();
 const config = require('config');
 
@@ -18,10 +18,15 @@ const chalk = require('chalk');
 
 // routes
 const setRoutes = require('./api/routes/route');
+app.use(express.json());
 setRoutes(app);
 
 // database
 const mongoose = require('mongoose');
+
+// errors
+const apiErrorHandler = require('./api/errors/errorHandler');
+app.use(apiErrorHandler);
 
 // middlewares
 const setMiddleware = require('./api/middlewares/middlewares');

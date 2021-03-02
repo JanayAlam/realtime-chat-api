@@ -4,7 +4,7 @@ const userSchema = new Schema({
     username: {
         type: String,
         trim: true,
-        maxlength: 8,
+        maxlength: 10,
         minlength: 4,
         required: true,
     },
