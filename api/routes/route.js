@@ -1,10 +1,15 @@
 // routers
-const authRouter = require('../routes/authRouter');
+const authRouter = require('./authRouter');
+const profileRouter = require('./profileRouter');
 
 const routes = [
     {
-        path: '/api/auth',
+        path: '/auth',
         router: authRouter,
+    },
+    {
+        path: '/profiles',
+        router: profileRouter,
     },
     {
         path: '/api',
@@ -21,7 +26,7 @@ module.exports = (app) => {
         if (route.path === '/api') {
             app.get(route.path, route.router);
         } else {
-            app.use(route.path, route.router);
+            app.use('/api' + route.path, route.router);
         }
     });
 };

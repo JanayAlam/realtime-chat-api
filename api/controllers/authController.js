@@ -16,25 +16,9 @@ const config = require('config');
 // utils
 const { generateRandomString } = require('../../utils/generator');
 const sendEmail = require('../../utils/emailSender');
+const ResponsePayload = require('../../utils/ResponsePayload');
 
 class AuthController {
-    /**
-     * User Response Payload
-     *
-     * Return a new object based on the provided object
-     *
-     * @param {Object} user user object
-     */
-    _userResponseDretails(user) {
-        return {
-            email: user.email,
-            isEmailVerified: user.isEmailVerified,
-            _id: user._id,
-            profile: user.profile || null,
-            username: user.username,
-        };
-    }
-
     /**
      * [POST] Register a new User
      *
@@ -44,21 +28,19 @@ class AuthController {
      *  Body must contain username, password and email value.
      * @param {Response} res response object provided by express
      */
-    registerNewUser = async (req, res) => {
+    registerNewUser = async (req, res, next) => {
         const { username, password, email } = req.body;
         try {
             // if the provided username is already used
             const previousUserWithUsername = await User.findOne({ username });
             if (previousUserWithUsername) {
-                const error = ApiError.badRequest('Username already taken');
-                return res.status(409).json(error);
+                return next(ApiError.alreadyExists('Username already taken'));
             }
 
             // if the provided email is already used
             const previousUserWithEmail = await User.findOne({ email });
             if (previousUserWithEmail) {
-                const error = ApiError.badRequest('Email already taken');
-                return res.status(409).json(error);
+                return next(ApiError.alreadyExists('Email already taken'));
             }
 
             // hashing the password
@@ -85,15 +67,16 @@ class AuthController {
             sendEmail(email, token);
 
             // creating payload for sending to the client
-            const responseData = this._userResponseDretails(createdUser);
+            const responseData = ResponsePayload.userResponseDretails(
+                createdUser
+            );
 
             // user created
             return res.status(201).json({
                 user: responseData,
             });
         } catch (err) {
-            // internal server error
-            return res.status(500).json(err);
+            return next(err);
         }
     };
 
@@ -103,38 +86,34 @@ class AuthController {
      * Verify the email token with the user's token
      *
      * @param {Request} req request object with a body
-     *  {emailVerificationToken:String, _id:String}
+     *  {emailVerificationToken:String, email:String}
      * @param {Response} res response object provided by express
      */
-    verifyEmailToken = async (req, res) => {
-        const { emailVerificationToken, _id } = req.body;
+    verifyEmailToken = async (req, res, next) => {
+        const { emailVerificationToken, email } = req.body;
 
         // validation of the token
         if (!emailVerificationToken) {
-            return res.status(400).json({
-                message: 'Token is required',
-            });
+            return next(ApiError.badRequest('Token is required'));
         }
 
         try {
             // fetching the user
-            const user = await User.findById(_id);
+            const user = await User.findOne({ email });
 
             // if user not found
             if (!user) {
-                return res.status(404).json({
-                    message: 'User not found with the id',
-                });
+                return next(
+                    ApiError.notFound('User not found with the provided email')
+                );
             }
 
             // checking if the user is already verified
             if (user.isEmailVerified) {
-                return res.status(409).json({
-                    message: 'Already verified',
-                });
+                return next(ApiError.alreadyExists('Already verified'));
             }
 
-            // compareing the token
+            // compareing the token with the stored token in database
             const isMatched = await bcrypt.compare(
                 emailVerificationToken,
                 user.emailVerificationToken
@@ -142,9 +121,7 @@ class AuthController {
 
             // if token did not match with the database's token
             if (!isMatched) {
-                return res.status(400).json({
-                    message: 'Token did not matched',
-                });
+                return next(ApiError.notAcceptable('Token did not matched'));
             }
 
             // update the status of the verification of email
@@ -157,14 +134,16 @@ class AuthController {
             );
 
             // creating payload for sending to the client
-            const responseData = this._userResponseDretails(updatedUser);
+            const responseData = ResponsePayload.userResponseDretails(
+                updatedUser
+            );
 
             // all OK
             return res.status(200).json({
                 user: responseData,
             });
-        } catch (e) {
-            return res.status(500).json(err);
+        } catch (err) {
+            return next(err);
         }
     };
 
@@ -177,7 +156,7 @@ class AuthController {
      * @param {Request} req request object with a body {email:String, password:String}
      * @param {Response} res response object provided by express
      */
-    loginToExistingAccount = async (req, res) => {
+    loginToExistingAccount = async (req, res, next) => {
         const { email, password } = req.body;
         try {
             // fetching the user with the email
@@ -185,18 +164,15 @@ class AuthController {
 
             // if the user not found
             if (!user) {
-                return res.status(404).json({
-                    message: 'User not found with the email',
-                });
+                return next(ApiError.notFound('User not found with the email'));
             }
 
+            // compareing the password with the stored password in database
             const isMatched = await bcrypt.compare(password, user.password);
 
             // if password is wrong
             if (!isMatched) {
-                return res.status(401).json({
-                    message: 'Password did not matched',
-                });
+                return next(ApiError.unAuthorized('Password did not matched'));
             }
 
             // creating a json web token for the user
@@ -208,19 +184,22 @@ class AuthController {
                     profile: user.profile,
                     _id: user._id,
                 },
-                config.get('secret-key')
+                config.get('secret-key'),
+                {
+                    expiresIn: '2d',
+                }
             );
 
             // creating payload for sending to the client
-            const responseData = this._userResponseDretails(user);
+            const responseData = ResponsePayload.userResponseDretails(user);
 
             // all OK
             return res.status(200).json({
                 user: responseData,
                 token,
             });
-        } catch (e) {
-            return res.status(500).json(err);
+        } catch (err) {
+            return next(err);
         }
     };
 }

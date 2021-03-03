@@ -2,7 +2,7 @@
 const express = require('express');
 const morgan = require('morgan');
 
-const middlewares = [morgan('dev'), express.json()];
+const middlewares = [morgan('dev')];
 
 module.exports = (app) => {
     middlewares.forEach((middleware) => {
