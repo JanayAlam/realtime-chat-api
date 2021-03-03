@@ -22,8 +22,9 @@ const profileSchema = new Schema({
     profilePhoto: {
         type: String,
         required: false,
+        default: '/uploads/default.png',
     },
-    blockedProfile: [
+    blockedProfiles: [
         {
             type: Schema.Types.ObjectId,
             ref: 'Profile',
@@ -37,7 +38,7 @@ const profileSchema = new Schema({
     ],
     isDeactivated: {
         type: Boolean,
-        default: true,
+        default: false,
     },
 });
 

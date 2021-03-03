@@ -24,7 +24,7 @@ class AuthController {
      *
      * Register a new user with their unique email and username.
      *
-     * @param {Request} req request json object with a body.
+     * @param {Request} req Request json object with a body.
      *  Body must contain username, password and email value.
      * @param {Response} res response object provided by express
      */
@@ -85,7 +85,7 @@ class AuthController {
      *
      * Verify the email token with the user's token
      *
-     * @param {Request} req request object with a body
+     * @param {Request} req Request object with a body
      *  {emailVerificationToken:String, email:String}
      * @param {Response} res response object provided by express
      */
@@ -126,7 +126,7 @@ class AuthController {
 
             // update the status of the verification of email
             const updatedUser = await User.findOneAndUpdate(
-                _id,
+                { email },
                 {
                     $set: { isEmailVerified: true },
                 },
@@ -153,7 +153,7 @@ class AuthController {
      * Authorize the user with there provided email and password. If they are valid then
      *  it will give them a JSON Web Token for further authorization
      *
-     * @param {Request} req request object with a body {email:String, password:String}
+     * @param {Request} req Request object with a body {email:String, password:String}
      * @param {Response} res response object provided by express
      */
     loginToExistingAccount = async (req, res, next) => {
