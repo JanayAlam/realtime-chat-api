@@ -4,14 +4,37 @@ const User = require('../models/User');
 // error
 const ApiError = require('../errors/ApiError');
 
+// jwt
+const jwt = require('jsonwebtoken');
+
 // encryption
 const bcrypt = require('bcrypt');
+
+// config
+const config = require('config');
 
 // utils
 const { generateRandomString } = require('../../utils/generator');
 const sendEmail = require('../../utils/emailSender');
 
 class AuthController {
+    /**
+     * User Response Payload
+     *
+     * Return a new object based on the provided object
+     *
+     * @param {Object} user user object
+     */
+    _userResponseDretails(user) {
+        return {
+            email: user.email,
+            isEmailVerified: user.isEmailVerified,
+            _id: user._id,
+            profile: user.profile || null,
+            username: user.username,
+        };
+    }
+
     /**
      * [POST] Register a new User
      *
@@ -62,12 +85,7 @@ class AuthController {
             sendEmail(email, token);
 
             // creating payload for sending to the client
-            const responseData = {
-                _id: createdUser._id,
-                isEmailVerified: updcreatedUseratedUser.isEmailVerified,
-                email: createdUser.email,
-                username: createdUser.username,
-            };
+            const responseData = this._userResponseDretails(createdUser);
 
             // user created
             return res.status(201).json({
@@ -139,16 +157,67 @@ class AuthController {
             );
 
             // creating payload for sending to the client
-            const responseData = {
-                _id: updatedUser._id,
-                isEmailVerified: updatedUser.isEmailVerified,
-                email: updatedUser.email,
-                username: updatedUser.username,
-            };
+            const responseData = this._userResponseDretails(updatedUser);
 
             // all OK
             return res.status(200).json({
                 user: responseData,
+            });
+        } catch (e) {
+            return res.status(500).json(err);
+        }
+    };
+
+    /**
+     * [POST] Login Controller
+     *
+     * Authorize the user with there provided email and password. If they are valid then
+     *  it will give them a JSON Web Token for further authorization
+     *
+     * @param {Request} req request object with a body {email:String, password:String}
+     * @param {Response} res response object provided by express
+     */
+    loginToExistingAccount = async (req, res) => {
+        const { email, password } = req.body;
+        try {
+            // fetching the user with the email
+            const user = await User.findOne({ email });
+
+            // if the user not found
+            if (!user) {
+                return res.status(404).json({
+                    message: 'User not found with the email',
+                });
+            }
+
+            const isMatched = await bcrypt.compare(password, user.password);
+
+            // if password is wrong
+            if (!isMatched) {
+                return res.status(401).json({
+                    message: 'Password did not matched',
+                });
+            }
+
+            // creating a json web token for the user
+            const token = jwt.sign(
+                {
+                    username: user.username,
+                    isEmailVerified: user.isEmailVerified,
+                    email: user.email,
+                    profile: user.profile,
+                    _id: user._id,
+                },
+                config.get('secret-key')
+            );
+
+            // creating payload for sending to the client
+            const responseData = this._userResponseDretails(user);
+
+            // all OK
+            return res.status(200).json({
+                user: responseData,
+                token,
             });
         } catch (e) {
             return res.status(500).json(err);
