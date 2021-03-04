@@ -5,13 +5,17 @@ const router = require('express').Router();
 const AuthController = require('../controllers/AuthController');
 
 // validations
-const userRegisterDto = require('../dto/userRegisterDto');
-const userLoginDto = require('../dto/userLoginDto');
+const userRegisterDto = require('../dto/authDtos/userRegisterDto');
+const userLoginDto = require('../dto/authDtos/userLoginDto');
 
 // middlewares
 const validateDto = require('../middlewares/validateDto');
 
-router.post('/register', validateDto(userRegisterDto), AuthController.registerNewUser);
+router.post(
+    '/register',
+    validateDto(userRegisterDto),
+    AuthController.registerNewUser
+);
 router.patch('/email-verify', AuthController.verifyEmailToken);
 router.post(
     '/login',
