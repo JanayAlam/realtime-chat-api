@@ -1,3 +1,6 @@
+// dependencies
+const fs = require('fs');
+
 // models
 const User = require('../models/User');
 const Profile = require('../models/Profile');
@@ -9,6 +12,23 @@ const ApiError = require('../errors/ApiError');
 const ResponsePayload = require('../../utils/ResponsePayload');
 
 class ProfileController {
+    /**
+     * Unlink The Photo From Storage
+     *
+     * @param {String} img Old photo path
+     * @returns {Error|null}
+     */
+    _unlinkProfilePhoto = (img) => {
+        if (img !== '/uploads/default.png') {
+            fs.unlink(`public${img}`, (error) => {
+                if (error) {
+                    return error;
+                }
+                return null;
+            });
+        }
+    };
+
     /**
      * [POST] Create a new Profile
      *
@@ -53,9 +73,11 @@ class ProfileController {
             );
 
             // all OK
-            return res
-                .status(201)
-                .json({ user: userResponsePayload, profile: createdProfile });
+            return res.status(201).json({
+                message: 'Profile created successfully',
+                user: userResponsePayload,
+                profile: createdProfile,
+            });
         } catch (err) {
             return next(err);
         }
@@ -77,7 +99,9 @@ class ProfileController {
             });
 
             // all OK
-            return res.status(200).json(profiles);
+            return res
+                .status(200)
+                .json({ message: 'Profiles fetched successfully', profiles });
         } catch (err) {
             return next(err);
         }
@@ -109,7 +133,9 @@ class ProfileController {
             }
 
             // all OK
-            return res.status(200).json(profile);
+            return res
+                .status(200)
+                .json({ message: 'Profile fetched successfully', profile });
         } catch (err) {
             return next(err);
         }
@@ -155,7 +181,10 @@ class ProfileController {
             );
 
             // all OK
-            return res.status(200).json(updatedProfile);
+            return res.status(200).json({
+                message: 'Profile updated successfully',
+                profile: updatedProfile,
+            });
         } catch (err) {
             return next(err);
         }
@@ -190,7 +219,115 @@ class ProfileController {
             );
 
             // all OK
-            return res.status(200).json(updatedProfile);
+            return res.status(200).json({
+                message: 'Profile active status changed successfully',
+                profile: updatedProfile,
+            });
+        } catch (err) {
+            return next(err);
+        }
+    };
+
+    /**
+     * [PATCH] Change Profile Photo
+     *
+     * Fetch a specific profile with profile id and update its profile photo
+     *
+     * @param {Request} req Request object with multipart form type body with a image {profilePhoto}.
+     * @param {Response} res Response object provided by express.
+     */
+    changeProfilePhoto = async (req, res, next) => {
+        const { id } = req.params;
+        try {
+            // photo url
+            const profilePhoto = `/uploads/${req.file.filename}`;
+
+            // fetching
+            const profile = await Profile.findById(id);
+
+            // if profile isn't in the database
+            if (!profile) {
+                return next(
+                    ApiError.notFound('Profile not found with the provided ID')
+                );
+            }
+
+            // old profile photo path
+            const oldPhoto = profile.profilePhoto;
+
+            // deleting old photo from storage
+            const unlinkPhotoError = this._unlinkProfilePhoto(oldPhoto);
+
+            // throwing error if there was problem in deleting the photo
+            if (unlinkPhotoError) {
+                return next(unlinkPhotoError);
+            }
+
+            // updating
+            const updatedProfile = await Profile.findOneAndUpdate(
+                { _id: id },
+                {
+                    $set: { profilePhoto },
+                },
+                { new: true }
+            );
+
+            // all OK
+            return res.status(200).json({
+                message: 'Profile photo uploaded successfully',
+                profile: updatedProfile,
+            });
+        } catch (err) {
+            return next(err);
+        }
+    };
+
+    /**
+     * [DELETE] Delete Profile Photo
+     *
+     * Fetch a specific profile with profile id and delete its profile photo
+     *
+     * @param {Request} req Request object provided by express.
+     * @param {Response} res Response object provided by express.
+     */
+    deleteProfilePhoto = async (req, res, next) => {
+        const { id } = req.params;
+        try {
+            // fetching
+            const profile = await Profile.findById(id);
+
+            // if profile isn't in the database
+            if (!profile) {
+                return next(
+                    ApiError.notFound('Profile not found with the provided ID')
+                );
+            }
+
+            // old profile photo path
+            const oldPhoto = profile.profilePhoto;
+
+            // deleting old photo from storage
+            const unlinkPhotoError = this._unlinkProfilePhoto(oldPhoto);
+
+            // throwing error if there was problem in deleting the photo
+            if (unlinkPhotoError) {
+                return next(unlinkPhotoError);
+            }
+
+            // updating
+            const updatedProfile = await Profile.findOneAndUpdate(
+                { _id: id },
+                {
+                    $set: { profilePhoto: '/uploads/default.png' },
+                },
+                { new: true }
+            );
+
+            // all OK
+            return res.status(200).json({
+                message: 'Profile photo deleted successfully',
+                profile: updatedProfile,
+            });
         } catch (err) {
             return next(err);
         }

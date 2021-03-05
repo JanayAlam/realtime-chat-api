@@ -7,7 +7,7 @@ const Profile = require('../models/Profile');
 /**
  * Check If Profile is Active or Not
  *
- * Block the request if profile is already deactivate
+ * Block the request if profile is active
  *
  * @param {Request} req Request object provided by express.
  * @param {Response} res Response object provided by express.
@@ -20,8 +20,8 @@ module.exports = async (req, res, next) => {
             return next(ApiError.notFound('Profile not found'));
         }
 
-        if (profile.isDeactivated) {
-            return next(ApiError.alreadyExists('Profile is deactivated'));
+        if (!profile.isDeactivated) {
+            return next(ApiError.notAcceptable('Profile is active'));
         }
 
         next();

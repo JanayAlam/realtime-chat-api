@@ -16,9 +16,12 @@ const DB_URL = `mongodb+srv://${config.get('db-username')}:${config.get(
 // third party dependencies
 const chalk = require('chalk');
 
+// middlewares
+const setMiddleware = require('./api/middlewares/middlewares');
+setMiddleware(app);
+
 // routes
 const setRoutes = require('./api/routes/route');
-app.use(express.json());
 setRoutes(app);
 
 // database
@@ -27,10 +30,6 @@ const mongoose = require('mongoose');
 // errors
 const apiErrorHandler = require('./api/errors/errorHandler');
 app.use(apiErrorHandler);
-
-// middlewares
-const setMiddleware = require('./api/middlewares/middlewares');
-setMiddleware(app);
 
 // serving the application
 const PORT = process.env.PORT || 8080;

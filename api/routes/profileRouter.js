@@ -16,6 +16,9 @@ const validateDto = require('../middlewares/validateDto');
 const isDeactivated = require('../middlewares/isDeactivated');
 const isActivated = require('../middlewares/isActivated');
 
+// utils
+const upload = require('../../utils/multerConfig');
+
 // create profile
 router.post(
     '/',
@@ -30,7 +33,7 @@ router.get(
     '/',
     isAuthorize,
     isEmailValid,
-    isDeactivated,
+    isActivated,
     ProfileController.getProfiles
 );
 
@@ -39,7 +42,7 @@ router.get(
     '/:id',
     isAuthorize,
     isEmailValid,
-    isDeactivated,
+    isActivated,
     ProfileController.getProfile
 );
 
@@ -50,7 +53,7 @@ router.put(
     validateDto(nameDto),
     validateDto(statusDto),
     isEmailValid,
-    isDeactivated,
+    isActivated,
     ProfileController.update
 );
 
@@ -59,7 +62,7 @@ router.patch(
     '/deactivate/:id',
     isAuthorize,
     isEmailValid,
-    isDeactivated,
+    isActivated,
     ProfileController.activeOrDeactiveProfile
 );
 
@@ -68,12 +71,29 @@ router.patch(
     '/activate/:id',
     isAuthorize,
     isEmailValid,
-    isActivated,
+    isDeactivated,
     ProfileController.activeOrDeactiveProfile
 );
 
-// 4. Chnage profilePhoto - PATCH
-// 5. Remove profilePhoto - PATCH
+// Chnage profilePhoto - PATCH
+router.patch(
+    '/profile-photo/:id',
+    isAuthorize,
+    isEmailValid,
+    isActivated,
+    upload.single('profilePhoto'),
+    ProfileController.changeProfilePhoto
+);
+
+// Remove profilePhoto - PATCH
+router.delete(
+    '/profile-photo/:id',
+    isAuthorize,
+    isEmailValid,
+    isActivated,
+    ProfileController.deleteProfilePhoto
+);
+
 // 6. Push blockList Profile - PATCH
 // 7. Pull blockList Profile - PATCH
 
