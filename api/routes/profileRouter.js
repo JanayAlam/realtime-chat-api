@@ -48,7 +48,7 @@ router.get(
 
 // edit user profile (name or status)
 router.put(
-    '/:id',
+    '/',
     isAuthorize,
     validateDto(nameDto),
     validateDto(statusDto),
@@ -59,7 +59,7 @@ router.put(
 
 // deactivate user profile
 router.patch(
-    '/deactivate/:id',
+    '/deactivate',
     isAuthorize,
     isEmailValid,
     isActivated,
@@ -68,16 +68,16 @@ router.patch(
 
 // activate user profile
 router.patch(
-    '/activate/:id',
+    '/activate',
     isAuthorize,
     isEmailValid,
     isDeactivated,
     ProfileController.activeOrDeactiveProfile
 );
 
-// Chnage profilePhoto - PATCH
+// Chnage profilePhoto
 router.patch(
-    '/profile-photo/:id',
+    '/profile-photo',
     isAuthorize,
     isEmailValid,
     isActivated,
@@ -85,16 +85,37 @@ router.patch(
     ProfileController.changeProfilePhoto
 );
 
-// Remove profilePhoto - PATCH
+// Remove profilePhoto
 router.delete(
-    '/profile-photo/:id',
+    '/profile-photo',
     isAuthorize,
     isEmailValid,
     isActivated,
     ProfileController.deleteProfilePhoto
 );
 
-// 6. Push blockList Profile - PATCH
-// 7. Pull blockList Profile - PATCH
+/**
+ * Push blockList Profile
+ * id: Id of the profile which to block
+ */
+router.patch(
+    '/block/:id',
+    isAuthorize,
+    isEmailValid,
+    isActivated,
+    ProfileController.blockProfile
+);
+
+/**
+ * Pull blockList Profile
+ * id: Id of the profile which to unblock
+ */
+router.patch(
+    '/unblock/:id',
+    isAuthorize,
+    isEmailValid,
+    isActivated,
+    ProfileController.unblockProfile
+);
 
 module.exports = router;

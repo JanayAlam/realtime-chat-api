@@ -73,6 +73,7 @@ class AuthController {
 
             // user created
             return res.status(201).json({
+                message: 'New user created successfully',
                 user: responseData,
             });
         } catch (err) {
@@ -140,6 +141,7 @@ class AuthController {
 
             // all OK
             return res.status(200).json({
+                message: 'Email verified successfully',
                 user: responseData,
             });
         } catch (err) {
@@ -195,6 +197,7 @@ class AuthController {
 
             // all OK
             return res.status(200).json({
+                message: 'Logged in successfully',
                 user: responseData,
                 token,
             });

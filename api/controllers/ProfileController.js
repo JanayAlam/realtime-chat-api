@@ -10,6 +10,7 @@ const ApiError = require('../errors/ApiError');
 
 // utils
 const ResponsePayload = require('../../utils/ResponsePayload');
+const { kStringMaxLength } = require('buffer');
 
 class ProfileController {
     /**
@@ -98,10 +99,23 @@ class ProfileController {
                 select: 'username email isEmailVerified',
             });
 
+            // authorized user profile
+            const userProfile = await Profile.findById(req.user.profile);
+
+            // removing all blocklist people
+            const responseProfiles = profiles.filter((value) => {
+                if (!userProfile.blockedProfiles.includes(value._id)) {
+                    if (!value.blockedProfiles.includes(userProfile._id)) {
+                        return true;
+                    }
+                }
+            });
+
             // all OK
-            return res
-                .status(200)
-                .json({ message: 'Profiles fetched successfully', profiles });
+            return res.status(200).json({
+                message: 'Profiles fetched successfully',
+                profiles: responseProfiles,
+            });
         } catch (err) {
             return next(err);
         }
@@ -125,10 +139,30 @@ class ProfileController {
                 select: 'username email isEmailVerified',
             });
 
+            // user profile
+            const userProfile = await Profile.findById(
+                req.user.profile
+            ).populate({
+                path: 'user',
+                select: 'username email isEmailVerified',
+            });
+
             // if profile isn't in the database
             if (!profile) {
                 return next(
                     ApiError.notFound('Profile not found with the provided ID')
+                );
+            }
+
+            if (
+                userProfile.blockedProfiles.includes(profile._id) ||
+                profile.blockedProfiles.includes(userProfile._id)
+            ) {
+                // profile is blocked
+                return next(
+                    ApiError.notAcceptable(
+                        'Profile is blocked or you are blocked by them'
+                    )
                 );
             }
 
@@ -152,11 +186,11 @@ class ProfileController {
      * @param {Response} res Response object provided by express.
      */
     update = async (req, res, next) => {
-        const { id } = req.params;
         let { name, status } = req.body;
+
         try {
             // fetching the profile
-            const profile = await Profile.findById(id);
+            const profile = await Profile.findById(req.user.profile);
 
             // if profile isn't in the database
             if (!profile) {
@@ -175,10 +209,13 @@ class ProfileController {
 
             // update that profile on database
             const updatedProfile = await Profile.findOneAndUpdate(
-                { _id: id },
+                { _id: profile._id },
                 { $set: { name, status } },
                 { new: true }
-            );
+            ).populate({
+                path: 'user',
+                select: 'username email isEmailVerified',
+            });
 
             // all OK
             return res.status(200).json({
@@ -199,7 +236,7 @@ class ProfileController {
      * @param {Response} res Response object provided by express.
      */
     activeOrDeactiveProfile = async (req, res, next) => {
-        const { id } = req.params;
+        const id = req.user.profile;
         try {
             // fetching and updating
             const profile = await Profile.findById(id);
@@ -233,11 +270,11 @@ class ProfileController {
      *
      * Fetch a specific profile with profile id and update its profile photo
      *
-     * @param {Request} req Request object with multipart form type body with a image {profilePhoto}.
+     * @param {Request} req Request object with multipart form type body with a image {profilePhoto:Image}.
      * @param {Response} res Response object provided by express.
      */
     changeProfilePhoto = async (req, res, next) => {
-        const { id } = req.params;
+        const id = req.user.profile;
         try {
             // photo url
             const profilePhoto = `/uploads/${req.file.filename}`;
@@ -285,13 +322,13 @@ class ProfileController {
     /**
      * [DELETE] Delete Profile Photo
      *
-     * Fetch a specific profile with profile id and delete its profile photo
+     * Fetch a specific profile with profile id and delete it's profile photo
      *
      * @param {Request} req Request object provided by express.
      * @param {Response} res Response object provided by express.
      */
     deleteProfilePhoto = async (req, res, next) => {
-        const { id } = req.params;
+        const id = req.user.profile;
         try {
             // fetching
             const profile = await Profile.findById(id);
@@ -330,6 +367,123 @@ class ProfileController {
             });
         } catch (err) {
             return next(err);
+        }
+    };
+
+    /**
+     * [PATCH] Block Profile
+     *
+     * Request uri must have target profile id and user must be authorized.
+     *
+     * @param {Request} req  Response object provided by express.
+     * @param {Response} res Response object provided by express.
+     */
+    blockProfile = async (req, res, next) => {
+        const { id } = req.params;
+        const profileId = req.user.profile;
+        try {
+            // which profile to block
+            const targetProfile = await Profile.findById(id);
+
+            // block by whom
+            const userProfile = await Profile.findById(profileId);
+
+            // id target profile not found
+            if (!targetProfile) {
+                return next(
+                    ApiError.notFound(
+                        'Profile not found with the id which was provided by the user'
+                    )
+                );
+            }
+
+            // if user profile not found
+            if (!userProfile) {
+                return next(ApiError.notFound('Authorized profile not found'));
+            }
+
+            // already blocked
+            if (userProfile.blockedProfiles.includes(id)) {
+                return next(
+                    ApiError.notAcceptable('Already blocked this profile')
+                );
+            }
+
+            // updating the profile
+            const profile = await Profile.findOneAndUpdate(
+                { _id: profileId },
+                { $push: { blockedProfiles: targetProfile } },
+                { new: true }
+            );
+
+            // all OK
+            return res.status(200).json({
+                message: 'Added to blocklist',
+                profile,
+            });
+        } catch (e) {
+            return next(e);
+        }
+    };
+
+    /**
+     * [PATCH] Unblock Profile
+     *
+     * Request uri must have target profile id and user must be authorized.
+     *
+     * @param {Request} req  Response object provided by express.
+     * @param {Response} res Response object provided by express.
+     */
+    unblockProfile = async (req, res, next) => {
+        const { id } = req.params;
+        const profileId = req.user.profile;
+        try {
+            // which profile to unblock
+            const targetProfile = await Profile.findById(id);
+
+            // unblock from which profile
+            const userProfile = await Profile.findById(profileId);
+
+            // id target profile not found
+            if (!targetProfile) {
+                return next(
+                    ApiError.notFound(
+                        'Profile not found with the id which was provided by the user'
+                    )
+                );
+            }
+
+            // if user profile not found
+            if (!userProfile) {
+                return next(ApiError.notFound('Authorized profile not found'));
+            }
+
+            console.log(userProfile, targetProfile);
+
+            // not blocked
+            if (!userProfile.blockedProfiles.includes(id)) {
+                return next(
+                    ApiError.notAcceptable(
+                        'Cannot unblock a profile which is not blocked'
+                    )
+                );
+            }
+
+            // updating the profile
+            const profile = await Profile.findOneAndUpdate(
+                { _id: profileId },
+                { $pull: { blockedProfiles: targetProfile._id } },
+                { new: true }
+            );
+
+            // all OK
+            return res.status(200).json({
+                message: 'Successfully unblocked the profile',
+                profile,
+                unblockedProfile: targetProfile,
+            });
+        } catch (e) {
+            return next(e);
         }
     };
 }
