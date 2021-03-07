@@ -8,8 +8,15 @@ const chatRoomSchema = new Schema(
                 ref: 'Message',
             },
         ],
+        pairProfiles: [
+            {
+                type: Schema.Types.ObjectId,
+                ref: 'Profile',
+            },
+        ],
     },
-    { timestamps: true });
+    { timestamps: true }
+);
 
 const ChatRoom = model('ChatRoom', chatRoomSchema);
 
