@@ -1,6 +1,8 @@
 // application
 const express = require('express');
+const http = require('http');
 const app = express();
+const server = http.createServer(app);
 
 // dot env and configuration dependencies
 require('dotenv').config();
@@ -31,7 +33,10 @@ const mongoose = require('mongoose');
 const apiErrorHandler = require('./api/errors/errorHandler');
 app.use(apiErrorHandler);
 
-// serving the application
+
+/**
+ * @type {number}
+ */
 const PORT = process.env.PORT || 8080;
 
 mongoose
@@ -41,9 +46,8 @@ mongoose
         useFindAndModify: false,
     })
     .then(() => {
-        app.listen(PORT, () => {
+        server.listen(PORT, () => {
             console.log(`Server running on port ${PORT}`);
-            console.log(chalk.green(`Visit: http://localhost:${PORT}`));
         });
     })
     .catch((e) => {

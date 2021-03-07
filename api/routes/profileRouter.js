@@ -8,6 +8,9 @@ const ProfileController = require('../controllers/ProfileController.js');
 const profileDto = require('../dto/profileDtos/profileDto');
 const nameDto = require('../dto/profileDtos/nameDto');
 const statusDto = require('../dto/profileDtos/statusDto');
+const dateOfBirthDto = require('../dto/profileDtos/dateOfBirthDto');
+const genderDto = require('../dto/profileDtos/genderDto');
+const regionDto = require('../dto/profileDtos/regionDto');
 
 // middlewares
 const isAuthorize = require('../middlewares/validateToken');
@@ -52,6 +55,9 @@ router.put(
     isAuthorize,
     validateDto(nameDto),
     validateDto(statusDto),
+    validateDto(dateOfBirthDto),
+    validateDto(regionDto),
+    validateDto(genderDto),
     isEmailValid,
     isActivated,
     ProfileController.update

@@ -9,13 +9,13 @@ module.exports = async (req, res, next) => {
         const user = await User.findById(req.user._id);
 
         if (!user) {
-            next(ApiError.notFound('User not found'));
+            next(ApiError.notFound('Client user not found'));
         }
 
         if (!user.isEmailVerified) {
             return next(ApiError.notAcceptable('Email must be verified'));
         }
-        
+
         req.user = user;
         next();
     } catch (err) {

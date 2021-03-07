@@ -40,7 +40,7 @@ class ProfileController {
      */
     store = async (req, res, next) => {
         const userId = req.user._id;
-        const { name, status } = req.body;
+        const { name, status, dateOfBirth, gender, region } = req.body;
 
         try {
             // fetching user
@@ -54,6 +54,9 @@ class ProfileController {
                 user: userId,
                 name,
                 status,
+                dateOfBirth,
+                gender,
+                region,
                 blockedProfiles: [],
                 chatRooms: [],
             });
@@ -181,12 +184,12 @@ class ProfileController {
      * Fetch a specific profile with profile id and update it with provided body
      *
      * @param {Request} req Request json object with a body.
-     *  Body must contain either name or status or both. User must be authorized
-     *  for performing this request.
+     *  Body must contain either name or status or dateOfBirth or region or gender or all of them.
+     *  User must be authorized for performing this request.
      * @param {Response} res Response object provided by express.
      */
     update = async (req, res, next) => {
-        let { name, status } = req.body;
+        let { name, status, dateOfBirth, region, gender } = req.body;
 
         try {
             // fetching the profile
@@ -205,6 +208,15 @@ class ProfileController {
             }
             if (!status) {
                 status = profile.status;
+            }
+            if (!dateOfBirth) {
+                dateOfBirth = profile.dateOfBirth;
+            }
+            if (!region) {
+                region = profile.region;
+            }
+            if (!gender) {
+                gender = profile.gender;
             }
 
             // update that profile on database
