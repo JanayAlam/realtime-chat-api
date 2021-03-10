@@ -2,29 +2,29 @@
 const router = require('express').Router();
 
 // controllers
-const ChatRoomController = require('../controllers/ChatRoomController');
+const MessageController = require('../controllers/MessageController');
 
 // middlewares
 const isAuthorize = require('../middlewares/validateToken');
 const isEmailValid = require('../middlewares/validateEmail');
 const isActivated = require('../middlewares/isActivated');
 
-// create chat room
+// create new message
 router.post(
     '/',
     isAuthorize,
     isEmailValid,
     isActivated,
-    ChatRoomController.createChatRoom
+    MessageController.sendMessage
 );
 
-// delete chat room
+// delete message
 router.delete(
-    '/:roomId',
+    '/:messageId',
     isAuthorize,
     isEmailValid,
     isActivated,
-    ChatRoomController.removeChatRoom
+    MessageController.deleteMessage
 );
 
 module.exports = router;

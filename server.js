@@ -33,7 +33,6 @@ const mongoose = require('mongoose');
 const apiErrorHandler = require('./api/errors/errorHandler');
 app.use(apiErrorHandler);
 
-
 /**
  * @type {number}
  */
@@ -47,7 +46,7 @@ mongoose
     })
     .then(() => {
         server.listen(PORT, () => {
-            console.log(`Server running on port ${PORT}`);
+            console.log(chalk.green(`Server running on port ${PORT}`));
         });
     })
     .catch((e) => {

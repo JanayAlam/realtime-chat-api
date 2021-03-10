@@ -8,7 +8,12 @@ const messageSchema = new Schema(
         },
         sender: {
             type: Schema.Types.ObjectId,
-            ref: 'profile',
+            ref: 'Profile',
+            required: true,
+        },
+        chatRoom: {
+            type: Schema.Types.ObjectId,
+            ref: 'ChatRoom',
             required: true,
         },
     },

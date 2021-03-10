@@ -11,7 +11,7 @@ class ChatRoomController {
      *
      * @param {Request} req Request object with a body {id:TargetProfilesID}.
      * @param {Response} res Response object provided by express.
-     * @param {Callback} next Callback function to call next middleware
+     * @param {Callback} next Callback function to call next middleware.
      */
     createChatRoom = async (req, res, next) => {
         const { id } = req.body; // pair profile id
@@ -57,7 +57,8 @@ class ChatRoomController {
                     return true;
                 }
             });
-            if (stauts) {
+
+            if (stauts.length > 0) {
                 return next(
                     ApiError.alreadyExists(
                         'Chat room already exists with requested profile'
@@ -100,7 +101,7 @@ class ChatRoomController {
      *
      * @param {Request} req Request object provided by express.
      * @param {Response} res Response object provided by express.
-     * @param {Callback} next Callback function to call next middleware
+     * @param {Callback} next Callback function to call next middleware.
      */
     removeChatRoom = async (req, res, next) => {
         const { roomId } = req.params;

@@ -124,4 +124,16 @@ router.patch(
     ProfileController.unblockProfile
 );
 
+/**
+ * Show all chat rooms
+ * profileId: Id of the profile which chat rooms are going to show
+ */
+router.get(
+    '/chat-rooms/:profileId',
+    isAuthorize,
+    isEmailValid,
+    isActivated,
+    ProfileController.getAllChatRoom
+);
+
 module.exports = router;

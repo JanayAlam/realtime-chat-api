@@ -2,6 +2,7 @@
 const authRouter = require('./authRouter');
 const profileRouter = require('./profileRouter');
 const chatRoomRouter = require('./chatRoomRouter');
+const messageRouter = require('./messageRouter');
 
 const routes = [
     {
@@ -15,6 +16,10 @@ const routes = [
     {
         path: '/chat-room',
         router: chatRoomRouter,
+    },
+    {
+        path: '/message',
+        router: messageRouter,
     },
     {
         path: '/api',

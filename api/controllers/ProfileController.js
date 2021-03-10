@@ -4,6 +4,7 @@ const fs = require('fs');
 // models
 const User = require('../models/User');
 const Profile = require('../models/Profile');
+const ChatRoom = require('../models/ChatRoom');
 
 // error
 const ApiError = require('../errors/ApiError');
@@ -37,6 +38,7 @@ class ProfileController {
      *  Body must contain name or status which is not required. User must be authorized
      *  for performing this request.
      * @param {Response} res Response object provided by express.
+     * @param {Callback} next Callback function to call next middleware.
      */
     store = async (req, res, next) => {
         const userId = req.user._id;
@@ -93,6 +95,7 @@ class ProfileController {
      * @param {Request} req Request object provided by express. User must be authorized
      *  for performing this request.
      * @param {Response} res Response object provided by express.
+     * @param {Callback} next Callback function to call next middleware.
      */
     getProfiles = async (req, res, next) => {
         try {
@@ -132,6 +135,7 @@ class ProfileController {
      *
      * @param {Request} req Request object provided by express.
      * @param {Response} res Response object provided by express.
+     * @param {Callback} next Callback function to call next middleware.
      */
     getProfile = async (req, res, next) => {
         const { id } = req.params;
@@ -187,6 +191,7 @@ class ProfileController {
      *  Body must contain either name or status or dateOfBirth or region or gender or all of them.
      *  User must be authorized for performing this request.
      * @param {Response} res Response object provided by express.
+     * @param {Callback} next Callback function to call next middleware.
      */
     update = async (req, res, next) => {
         let { name, status, dateOfBirth, region, gender } = req.body;
@@ -246,6 +251,7 @@ class ProfileController {
      *
      * @param {Request} req Request object provided by express.
      * @param {Response} res Response object provided by express.
+     * @param {Callback} next Callback function to call next middleware.
      */
     activeOrDeactiveProfile = async (req, res, next) => {
         const id = req.user.profile;
@@ -284,6 +290,7 @@ class ProfileController {
      *
      * @param {Request} req Request object with multipart form type body with a image {profilePhoto:Image}.
      * @param {Response} res Response object provided by express.
+     * @param {Callback} next Callback function to call next middleware.
      */
     changeProfilePhoto = async (req, res, next) => {
         const id = req.user.profile;
@@ -338,6 +345,7 @@ class ProfileController {
      *
      * @param {Request} req Request object provided by express.
      * @param {Response} res Response object provided by express.
+     * @param {Callback} next Callback function to call next middleware.
      */
     deleteProfilePhoto = async (req, res, next) => {
         const id = req.user.profile;
@@ -387,8 +395,9 @@ class ProfileController {
      *
      * Request uri must have target profile id and user must be authorized.
      *
-     * @param {Request} req  Response object provided by express.
+     * @param {Request} req Request object provided by express.
      * @param {Response} res Response object provided by express.
+     * @param {Callback} next Callback function to call next middleware.
      */
     blockProfile = async (req, res, next) => {
         const { id } = req.params;
@@ -443,8 +452,9 @@ class ProfileController {
      *
      * Request uri must have target profile id and user must be authorized.
      *
-     * @param {Request} req  Response object provided by express.
+     * @param {Request} req Request object provided by express.
      * @param {Response} res Response object provided by express.
+     * @param {Callback} next Callback function to call next middleware.
      */
     unblockProfile = async (req, res, next) => {
         const { id } = req.params;
@@ -494,8 +504,72 @@ class ProfileController {
                 profile,
                 unblockedProfile: targetProfile,
             });
-        } catch (e) {
-            return next(e);
+        } catch (err) {
+            return next(err);
+        }
+    };
+
+    /**
+     * [GET] Get Chat Rooms
+     *
+     * Request uri must have chat room id and user must be authorized.
+     *
+     * @param {Request} req Request object provided by express.
+     * @param {Response} res Response object provided by express.
+     * @param {Callback} next Callback function to call next middleware.
+     */
+    getAllChatRoom = async (req, res, next) => {
+        const { profileId } = req.params;
+        try {
+            // fetching the profile with chat rooms
+            const profile = await Profile.findById(profileId).populate(
+                'ChatRoom'
+            );
+
+            // if profile not found
+            if (!profile) {
+                return next(ApiError.notFound('Profile not found'));
+            }
+
+            // if user has no permission over this request
+            if (!req.user.profile.equals(profileId)) {
+                return next(
+                    ApiError.notAcceptable(
+                        'You have no permission for this request'
+                    )
+                );
+            }
+
+            // response array
+            let responsePayload = new Array();
+
+            for (let i = 0; i < profile.chatRooms.length; i++) {
+                const room = await ChatRoom.findById(profile.chatRooms[i]);
+
+                // filtering out the pair profile id
+                const pairProfileId = room.pairProfiles[0].equals(
+                    req.user.profile
+                )
+                    ? room.pairProfiles[1]
+                    : room.pairProfiles[0];
+
+                // single payload
+                const payload = {
+                    pariProfile: await Profile.findById(pairProfileId),
+                    _id: room._id,
+                };
+
+                // pushing the payload
+                responsePayload.push(payload);
+            }
+
+            // all OK
+            return res.status(200).json({
+                message: 'Successfully showing all chat rooms',
+                chatRooms: responsePayload,
+            });
+        } catch (err) {
+            return next(err);
         }
     };
 }
