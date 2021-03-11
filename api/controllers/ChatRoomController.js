@@ -109,6 +109,7 @@ class ChatRoomController {
             // room
             const room = await ChatRoom.findById(roomId);
 
+            // checking if the user has right to read the chat room
             if (!room.pairProfiles.includes(req.user.profile)) {
                 return next(
                     ApiError.notFound('Profile has no such room created')
@@ -125,12 +126,52 @@ class ChatRoomController {
                 );
             });
 
+            // deleting the chat room
             await ChatRoom.findOneAndDelete({ _id: roomId });
 
             // all OK
             return res.status(200).json({
                 message: 'Successfully removed chat room',
             });
+        } catch (err) {
+            return next(err);
+        }
+    };
+
+    /**
+     * [GET] Get All Messages
+     *
+     * @param {Request} req Request object provided by express.
+     * @param {Response} res Response object provided by express.
+     * @param {Callback} next Callback function to call next middleware.
+     */
+    getMessages = async (req, res, next) => {
+        const { roomId } = req.params;
+        try {
+            // fetching the room
+            const room = await ChatRoom.findById(roomId).populate({
+                path: 'messages',
+                select: 'sender message createdAt',
+                populate: {
+                    path: 'sender',
+                    select: 'name profilePhoto',
+                },
+            });
+
+            // if no room found
+            if (!room) {
+                return next(ApiError.notFound('Room not found'));
+            }
+
+            // checking if the user has right to read the chat room
+            if (!room.pairProfiles.includes(req.user.profile)) {
+                return next(
+                    ApiError.notFound('Profile has no such room created')
+                );
+            }
+
+            // all OK
+            return res.status(200).json(room.messages);
         } catch (err) {
             return next(err);
         }

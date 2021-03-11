@@ -518,7 +518,7 @@ class ProfileController {
      * @param {Response} res Response object provided by express.
      * @param {Callback} next Callback function to call next middleware.
      */
-    getAllChatRoom = async (req, res, next) => {
+    getChatRooms = async (req, res, next) => {
         const { profileId } = req.params;
         try {
             // fetching the profile with chat rooms

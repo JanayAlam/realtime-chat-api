@@ -133,7 +133,7 @@ router.get(
     isAuthorize,
     isEmailValid,
     isActivated,
-    ProfileController.getAllChatRoom
+    ProfileController.getChatRooms
 );
 
 module.exports = router;

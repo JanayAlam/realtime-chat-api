@@ -27,4 +27,13 @@ router.delete(
     ChatRoomController.removeChatRoom
 );
 
+// get all messages
+router.get(
+    '/messages/:roomId',
+    isAuthorize,
+    isEmailValid,
+    isActivated,
+    ChatRoomController.getMessages
+);
+
 module.exports = router;
