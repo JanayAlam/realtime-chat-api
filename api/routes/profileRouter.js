@@ -102,6 +102,7 @@ router.delete(
 
 /**
  * Show blockList the profile
+ * id: Id of the profile
  */
 router.get(
     '/blocks/:id',
