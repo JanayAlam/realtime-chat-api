@@ -101,6 +101,17 @@ router.delete(
 );
 
 /**
+ * Show blockList the profile
+ */
+router.get(
+    '/blocks/:id',
+    isAuthorize,
+    isEmailValid,
+    isActivated,
+    ProfileController.getBlockedProfileList
+);
+
+/**
  * Push blockList Profile
  * id: Id of the profile which to block
  */

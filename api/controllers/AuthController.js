@@ -17,6 +17,7 @@ const config = require('config');
 const { generateRandomString } = require('../../utils/generator');
 const sendEmail = require('../../utils/emailSender');
 const ResponsePayload = require('../../utils/ResponsePayload');
+const Profile = require('../models/Profile');
 
 class AuthController {
     /**
@@ -114,7 +115,7 @@ class AuthController {
                 return next(ApiError.alreadyExists('Already verified'));
             }
 
-            // compareing the token with the stored token in database
+            // comparing the token with the stored token in database
             const isMatched = await bcrypt.compare(
                 emailVerificationToken,
                 user.emailVerificationToken
@@ -195,11 +196,14 @@ class AuthController {
             // creating payload for sending to the client
             const responseData = ResponsePayload.userResponseDretails(user);
 
+            const profile = await Profile.findOne({ _id: user.profile });
+
             // all OK
             return res.status(200).json({
                 message: 'Logged in successfully',
                 user: responseData,
                 token,
+                profile,
             });
         } catch (err) {
             return next(err);

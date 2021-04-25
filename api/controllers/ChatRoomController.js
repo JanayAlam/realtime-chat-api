@@ -117,14 +117,14 @@ class ChatRoomController {
             }
 
             // updating user profiles
-            room.pairProfiles.forEach(async (value) => {
+            for (const value of room.pairProfiles) {
                 await Profile.findOneAndUpdate(
                     { _id: value },
                     {
                         $pull: { chatRooms: roomId },
                     }
                 );
-            });
+            }
 
             // deleting the chat room
             await ChatRoom.findOneAndDelete({ _id: roomId });

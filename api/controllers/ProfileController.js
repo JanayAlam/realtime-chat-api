@@ -9,6 +9,9 @@ const ChatRoom = require('../models/ChatRoom');
 // error
 const ApiError = require('../errors/ApiError');
 
+// encryption
+const bcrypt = require('bcrypt');
+
 // utils
 const ResponsePayload = require('../../utils/ResponsePayload');
 const { kStringMaxLength } = require('buffer');
@@ -38,7 +41,7 @@ class ProfileController {
      *  Body must contain name or status which is not required. User must be authorized
      *  for performing this request.
      * @param {Response} res Response object provided by express.
-     * @param {Callback} next Callback function to call next middleware.
+     * @param {Function} next Callback function to call next middleware.
      */
     store = async (req, res, next) => {
         const userId = req.user._id;
@@ -112,7 +115,9 @@ class ProfileController {
             const responseProfiles = profiles.filter((value) => {
                 if (!userProfile.blockedProfiles.includes(value._id)) {
                     if (!value.blockedProfiles.includes(userProfile._id)) {
-                        return true;
+                        if (!value.isDeactivated) {
+                            return true;
+                        }
                     }
                 }
             });
@@ -135,7 +140,7 @@ class ProfileController {
      *
      * @param {Request} req Request object provided by express.
      * @param {Response} res Response object provided by express.
-     * @param {Callback} next Callback function to call next middleware.
+     * @param {Function} next Callback function to call next middleware.
      */
     getProfile = async (req, res, next) => {
         const { id } = req.params;
@@ -173,6 +178,11 @@ class ProfileController {
                 );
             }
 
+            if (profile.isDeactivated) {
+                // profile is deavtivated
+                return next(ApiError.notAcceptable('Profile is disable'));
+            }
+
             // all OK
             return res
                 .status(200)
@@ -191,7 +201,7 @@ class ProfileController {
      *  Body must contain either name or status or dateOfBirth or region or gender or all of them.
      *  User must be authorized for performing this request.
      * @param {Response} res Response object provided by express.
-     * @param {Callback} next Callback function to call next middleware.
+     * @param {Function} next Callback function to call next middleware.
      */
     update = async (req, res, next) => {
         let { name, status, dateOfBirth, region, gender } = req.body;
@@ -227,7 +237,7 @@ class ProfileController {
             // update that profile on database
             const updatedProfile = await Profile.findOneAndUpdate(
                 { _id: profile._id },
-                { $set: { name, status } },
+                { $set: { name, status, dateOfBirth, region, gender } },
                 { new: true }
             ).populate({
                 path: 'user',
@@ -249,15 +259,32 @@ class ProfileController {
      *
      * Fetch a specific profile with profile id and active or deactive it
      *
-     * @param {Request} req Request object provided by express.
+     * @param {Request} req Request object provided by express. Request body must contain
+     *  password field.
      * @param {Response} res Response object provided by express.
-     * @param {Callback} next Callback function to call next middleware.
+     * @param {Function} next Callback function to call next middleware.
      */
     activeOrDeactiveProfile = async (req, res, next) => {
         const id = req.user.profile;
+        const { password } = req.body;
+
         try {
-            // fetching and updating
-            const profile = await Profile.findById(id);
+            // fetching the profile
+            const profile = await Profile.findById(id).populate({
+                path: 'user',
+                select: 'password',
+            });
+
+            // compareing the password with the stored password in database
+            const isMatched = await bcrypt.compare(
+                password,
+                profile.user.password
+            );
+
+            // if password is wrong
+            if (!isMatched) {
+                return next(ApiError.unAuthorized('Password did not matched'));
+            }
 
             // if profile isn't in the database
             if (!profile) {
@@ -290,11 +317,14 @@ class ProfileController {
      *
      * @param {Request} req Request object with multipart form type body with a image {profilePhoto:Image}.
      * @param {Response} res Response object provided by express.
-     * @param {Callback} next Callback function to call next middleware.
+     * @param {Function} next Callback function to call next middleware.
      */
     changeProfilePhoto = async (req, res, next) => {
         const id = req.user.profile;
         try {
+            if (!req.file) {
+                return next(ApiError.badRequest('No image file found'));
+            }
             // photo url
             const profilePhoto = `/uploads/${req.file.filename}`;
 
@@ -345,7 +375,7 @@ class ProfileController {
      *
      * @param {Request} req Request object provided by express.
      * @param {Response} res Response object provided by express.
-     * @param {Callback} next Callback function to call next middleware.
+     * @param {Function} next Callback function to call next middleware.
      */
     deleteProfilePhoto = async (req, res, next) => {
         const id = req.user.profile;
@@ -362,6 +392,14 @@ class ProfileController {
 
             // old profile photo path
             const oldPhoto = profile.profilePhoto;
+
+            if (oldPhoto.includes('default.png')) {
+                return next(
+                    ApiError.notAcceptable(
+                        'Cannot delete default profile photo'
+                    )
+                );
+            }
 
             // deleting old photo from storage
             const unlinkPhotoError = this._unlinkProfilePhoto(oldPhoto);
@@ -397,7 +435,7 @@ class ProfileController {
      *
      * @param {Request} req Request object provided by express.
      * @param {Response} res Response object provided by express.
-     * @param {Callback} next Callback function to call next middleware.
+     * @param {Function} next Callback function to call next middleware.
      */
     blockProfile = async (req, res, next) => {
         const { id } = req.params;
@@ -454,7 +492,7 @@ class ProfileController {
      *
      * @param {Request} req Request object provided by express.
      * @param {Response} res Response object provided by express.
-     * @param {Callback} next Callback function to call next middleware.
+     * @param {Function} next Callback function to call next middleware.
      */
     unblockProfile = async (req, res, next) => {
         const { id } = req.params;
@@ -510,13 +548,47 @@ class ProfileController {
     };
 
     /**
+     * [GET] List of Blocked Profile
+     *
+     * Fetch the profile and return the array of the blocked profile list
+     *
+     * @param {Request} req Request object provided by express.
+     * @param {Response} res Response object provided by express.
+     * @param {Function} next Callback function to call next middleware.
+     */
+    getBlockedProfileList = async (req, res, next) => {
+        const profileId = req.params.id;
+        try {
+            // fetching the authorized profile
+            const userProfile = await Profile.findById(profileId).populate(
+                'blockedProfiles'
+            );
+
+            // if the profile is not found
+            if (!userProfile) {
+                return next(
+                    ApiError.notFound(
+                        'No profile found assosiate with the user'
+                    )
+                );
+            }
+
+            return res.status(200).json({
+                blockedProfiles: userProfile.blockedProfiles,
+            });
+        } catch (err) {
+            return next(err);
+        }
+    };
+
+    /**
      * [GET] Get Chat Rooms
      *
      * Request uri must have chat room id and user must be authorized.
      *
      * @param {Request} req Request object provided by express.
      * @param {Response} res Response object provided by express.
-     * @param {Callback} next Callback function to call next middleware.
+     * @param {Function} next Callback function to call next middleware.
      */
     getChatRooms = async (req, res, next) => {
         const { profileId } = req.params;
@@ -541,7 +613,7 @@ class ProfileController {
             }
 
             // response array
-            let responsePayload = new Array();
+            let responsePayload = [];
 
             for (let i = 0; i < profile.chatRooms.length; i++) {
                 const room = await ChatRoom.findById(profile.chatRooms[i]);
