@@ -3,6 +3,8 @@ const express = require('express');
 const http = require('http');
 const app = express();
 const server = http.createServer(app);
+const socketIo = require('socket.io');
+const io = socketIo(server);
 
 // dot env and configuration dependencies
 require('dotenv').config();
@@ -31,11 +33,21 @@ const mongoose = require('mongoose');
 
 // errors
 const apiErrorHandler = require('./api/errors/errorHandler');
+const Message = require('./api/models/Message');
 app.use(apiErrorHandler);
 
-/**
- * @type {number}
- */
+// connect
+io.on('connection', (socket) => {
+    let room;
+    socket.on('joinRoom', (roomId) => {
+        socket.join(roomId);
+        room = roomId;
+    });
+    socket.on('send-message', (messageObject, chatRoom) => {
+        io.to(room).emit('recive-message', messageObject, chatRoom);
+    });
+});
+
 const PORT = process.env.PORT || 8080;
 
 mongoose

@@ -83,10 +83,17 @@ class MessageController {
                 { new: true }
             );
 
+            const responseMessage = await Message.findById(
+                createdMessage._id
+            ).populate({
+                path: 'sender',
+                select: 'profilePhoto name',
+            });
+
             // all OK
             return res.status(201).json({
                 message: 'Message created successfully',
-                messageObject: createdMessage,
+                messageObject: responseMessage,
                 chatRoom: updatedRoom,
             });
         } catch (err) {

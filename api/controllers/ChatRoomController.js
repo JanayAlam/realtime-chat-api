@@ -143,7 +143,7 @@ class ChatRoomController {
      *
      * @param {Request} req Request object provided by express.
      * @param {Response} res Response object provided by express.
-     * @param {Callback} next Callback function to call next middleware.
+     * @param {Function} next Callback function to call next middleware.
      */
     getMessages = async (req, res, next) => {
         const { roomId } = req.params;

@@ -560,9 +560,13 @@ class ProfileController {
         const profileId = req.params.id;
         try {
             // fetching the authorized profile
-            const userProfile = await Profile.findById(profileId).populate(
-                'blockedProfiles'
-            );
+            const userProfile = await Profile.findById(profileId).populate({
+                path: 'blockedProfiles',
+                populate: {
+                    path: 'user',
+                    select: 'username email',
+                },
+            });
 
             // if the profile is not found
             if (!userProfile) {
@@ -595,7 +599,7 @@ class ProfileController {
         try {
             // fetching the profile with chat rooms
             const profile = await Profile.findById(profileId).populate(
-                'ChatRoom'
+                'chatRooms'
             );
 
             // if profile not found
@@ -627,7 +631,7 @@ class ProfileController {
 
                 // single payload
                 const payload = {
-                    pariProfile: await Profile.findById(pairProfileId),
+                    pairProfile: await Profile.findById(pairProfileId),
                     _id: room._id,
                 };
 
